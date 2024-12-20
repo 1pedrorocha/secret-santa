@@ -5,8 +5,13 @@ function addNewInput() {
 
     // Cria o novo campo de input
     const newInput = document.createElement('input');
+    newInput.name = `participant-${inputCount}`;
     newInput.type = 'text';
+    newInput.inputMode = 'text';
     newInput.placeholder = `Adicione o nome do participante ${inputCount}`;
+    newInput.autocomplete = 'off';
+    newInput.spellcheck = 'false';
+    newInput.setAttribute('data-lpignore', 'true');
     newInput.oninput = handleInput; // Adiciona evento para detectar entrada de texto
 
     form.appendChild(newInput);

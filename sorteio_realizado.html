@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorteio Realizado</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="heading"></div>
+        <h1>Amigo Secreto - Itaipuaçu 2024</h1>
+    </div>
+    <div class="container">
+
+        <!-- revela o resultado -->
+
+        <div id="revealResult" class="reveal-container hidden">
+            <div class="reveal-card">
+                <h2 id="revealTitle">Oi, [Nome]!</h2>
+                <p id="revealSubtitle">Seu amigo secreto é...</p>
+                <div class="reveal-box" id="revealFriend">[Amigo Secreto]</div>
+                <div class="reveal-info">
+                    <div class="info-row">
+                        <span>Data da Troca de Presentes:</span>
+                        <span id="revealDate">25/12/2024</span>
+                    </div>
+                </div>
+                <button class="secondary-button" onclick="hideRevealResult()">Voltar</button>
+            </div>
+        </div>
+
+        <!-- conteúdo da página -->
+       
+        <main>
+            <div class="success-message">
+                <div class="check-icon">✔</div>
+                <h2>Sorteio realizado com sucesso!</h2>
+                <p>Clique no seu nome na lista a seguir para ver quem você tirou:</p>
+            </div>
+            <div id="participantsChecklist">
+                <div id="participantButtons">
+                    <!-- Os botões serão gerados dinamicamente -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer>
+        Criado por Pedro Rocha
+    </footer>
+
+
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle"></h2> <!-- Título dinâmico do modal -->
+            <p id="modalMessage"></p>
+            <button id="confirmButton" class="primary-button"></button>
+            <button onclick="closeModal()" class="secondary-button">Não, voltar</button>
+        </div>
+    </div>
+
+    
+
+
+
+
+
+
+    <script src="sorteio_realizado.js"></script>
+</body>
+</html>

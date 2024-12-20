@@ -103,7 +103,7 @@ function showConfirmationModal(participant, pairs) {
 
     // Define o título e a mensagem do modal
     modalTitle.innerText = `Você é ${participant}?`;
-    modalMessage.innerHTML = `Se você revelar o nome de outro participante, estragará o sorteio e terá que ser repetido.`;
+    modalMessage.innerHTML = `A surpresa é parte da diversão do amigo secreto. Revele o nome com atenção para não comprometer o sorteio.`;
     confirmButton.innerText = `Sim, eu sou ${participant}`;
     confirmButton.onclick = () => {
         revealSelection(participant, pairs);

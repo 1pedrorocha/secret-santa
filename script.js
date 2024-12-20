@@ -11,7 +11,7 @@ function addNewInput() {
     newInput.name = `participant-${inputCount}`;
     newInput.type = 'text';
     newInput.inputMode = 'text';
-    newInput.placeholder = `Adicione o nome do participante ${inputCount}`;
+    newInput.placeholder = `Adicione o participante ${inputCount}`;
     newInput.autocomplete = 'off';
     newInput.spellcheck = 'false';
     newInput.setAttribute('data-lpignore', 'true');
@@ -41,7 +41,7 @@ function initializeForm() {
     firstInput.name = `participant-1`;
     firstInput.type = 'text';
     firstInput.inputMode = 'text';
-    firstInput.placeholder = "Adicione o nome do primeiro participante";
+    firstInput.placeholder = "Adicione o participante";
     firstInput.autocomplete = 'off';
     firstInput.spellcheck = 'false';
     firstInput.setAttribute('data-lpignore', 'true');

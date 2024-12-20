@@ -1,9 +1,17 @@
-// Função para carregar participantes e exibir como checklist
-function loadParticipants() {
-    const participants = JSON.parse(localStorage.getItem('Participants')) || [];
-    const checklistContainer = document.getElementById('participantsChecklist');
+// Configurações da API do JSONBin
+const API_URL = "https://api.jsonbin.io/v3/b/6765548bad19ca34f8de4586";
+const API_KEY = "$2a$10$oCxIAsUt8iE0U3g08fKK9OYyAqJ09/mkZRrUNIVdny/uyRP90wAjG";
 
-    // Limpar o container antes de adicionar elementos
+// Função para carregar participantes e exibir como checklist
+async function loadParticipants() {
+    const data = await loadDataFromJSONBin();
+    const participants = data.participants || [];
+    const fixedPairs = data.fixedPairs || [];
+
+    console.log("Participantes carregados:", participants);
+    console.log("Pares fixos carregados:", fixedPairs);
+
+    const checklistContainer = document.getElementById('participantsChecklist');
     checklistContainer.innerHTML = "";
 
     participants.forEach((participant, index) => {
@@ -57,95 +65,134 @@ function toggleDropdown(index) {
     }
 }
 
-// Função para validar e salvar as seleções
-function finalizeSelection() {
-    const participants = JSON.parse(localStorage.getItem('Participants')) || [];
-    const fixedPairs = new Map();
+// Função para salvar as seleções no JSONBin
+async function finalizeStep2() {
+    const data = await loadDataFromJSONBin();
+    const participants = data.participants || [];
+    const fixedPairs = [];
 
     participants.forEach((participant, index) => {
         const checkbox = document.getElementById(`participant-${index}`);
         const dropdown = document.getElementById(`dropdown-${index}`);
 
         if (checkbox.checked && dropdown.value) {
-            fixedPairs.set(participant, dropdown.value);
+            fixedPairs.push({
+                giver: participant,
+                receiver: dropdown.value
+            });
         }
     });
 
-    console.log("Relações fixas:", Array.from(fixedPairs));
+    // Criar os blocos respeitando as relações fixas
+    const blocks = createBlocks(participants, fixedPairs);
 
-    // Criar blocos a partir das relações fixas
-    createBlocks(participants, fixedPairs);
+    console.log("Blocos formados:", blocks);
 
-    alert("Seleções salvas com sucesso! Redirecionando para o sorteio...");
-    window.location.href = "sorteio_realizado.html"; // Redireciona para a próxima etapa
+    // Salvar no JSONBin
+    const updatedData = { participants, fixedPairs, blocks };
+    await saveDataToJSONBin(updatedData);
+
+    alert("Relações salvas com sucesso! Redirecionando para o sorteio...");
+    window.location.href = 'sorteio_realizado.html';
 }
 
-// Função para criar e consolidar blocos a partir das relações fixas
+// Função para criar blocos respeitando as relações fixas
 function createBlocks(participants, fixedPairs) {
-    const miniBlocks = []; // Para armazenar os mini-blocos inicialmente
+    const blocks = [];
+    const used = new Set(); // Participantes já alocados em blocos
 
-    // Cria mini-blocos a partir das relações fixas
-    fixedPairs.forEach((value, key) => {
-        miniBlocks.push([key, value]);
-    });
+    // Cria um bloco para cada par fixo
+    fixedPairs.forEach(pair => {
+        const { giver, receiver } = pair;
+        let merged = false;
 
-    console.log("Mini-blocos iniciais:", miniBlocks);
-
-    // Consolidar mini-blocos em blocos maiores
-    const consolidated = consolidateBlocksWithOrder(miniBlocks);
-
-    // Adiciona participantes que não fazem parte de nenhum bloco
-    participants.forEach((participant) => {
-        const alreadyInBlock = consolidated.some(block => block.includes(participant));
-        if (!alreadyInBlock) {
-            consolidated.push([participant]); // Adiciona como um bloco isolado
-        }
-    });
-
-    // Transforma cada bloco em uma string única
-    const finalBlocks = consolidated.map(block => block.join('/'));
-
-    console.log("Blocos finais consolidados:", finalBlocks);
-    localStorage.setItem('Blocks', JSON.stringify(finalBlocks));
-}
-
-// Função para consolidar mini-blocos com base nas interseções
-function consolidateBlocksWithOrder(miniBlocks) {
-    let merged = true;
-
-    while (merged) {
-        merged = false;
-
-        for (let i = 0; i < miniBlocks.length; i++) {
-            for (let j = i + 1; j < miniBlocks.length; j++) {
-                const block1 = miniBlocks[i];
-                const block2 = miniBlocks[j];
-
-                // Caso 1: Conecta pelo final do bloco1 com o início do bloco2
-                if (block1[block1.length - 1] === block2[0]) {
-                    miniBlocks[i] = [...block1, ...block2.slice(1)];
-                    miniBlocks.splice(j, 1);
-                    merged = true;
-                    break;
+        // Tente unir blocos existentes que contenham o "giver" ou o "receiver"
+        blocks.forEach((block, index) => {
+            const elements = block.split('/');
+            if (elements.includes(giver)) {
+                if (!elements.includes(receiver)) {
+                    blocks[index] += `/${receiver}`;
+                    used.add(receiver);
                 }
-
-                // Caso 2: Conecta pelo início do bloco1 com o final do bloco2
-                if (block2[block2.length - 1] === block1[0]) {
-                    miniBlocks[i] = [...block2, ...block1.slice(1)];
-                    miniBlocks.splice(j, 1);
-                    merged = true;
-                    break;
+                used.add(giver);
+                merged = true;
+            } else if (elements.includes(receiver)) {
+                if (!elements.includes(giver)) {
+                    blocks[index] = `${giver}/${block}`;
+                    used.add(giver);
                 }
+                used.add(receiver);
+                merged = true;
             }
-            if (merged) break;
-        }
-    }
+        });
 
-    return miniBlocks;
+        // Se nenhum bloco existente foi unido, crie um novo bloco
+        if (!merged) {
+            blocks.push(`${giver}/${receiver}`);
+            used.add(giver);
+            used.add(receiver);
+        }
+    });
+
+    // Adicione participantes que não estão em nenhum bloco como elementos individuais
+    participants.forEach(participant => {
+        if (!used.has(participant)) {
+            blocks.push(participant);
+        }
+    });
+
+    return blocks;
 }
 
-// Adiciona evento ao botão "Sortear"
-document.getElementById('sortButton').addEventListener('click', finalizeSelection);
+// Função para carregar dados do JSONBin
+async function loadDataFromJSONBin() {
+    try {
+        const response = await fetch(API_URL, {
+            method: "GET",
+            headers: {
+                "X-Master-Key": API_KEY,
+            },
+        });
+        if (response.ok) {
+            const result = await response.json();
+            return result.record;
+        } else {
+            console.error("Erro ao carregar os dados:", response.statusText);
+            return null;
+        }
+    } catch (error) {
+        console.error("Erro ao carregar os dados:", error);
+        return null;
+    }
+}
 
-// Evento para carregar os participantes ao carregar a página
-document.addEventListener('DOMContentLoaded', loadParticipants);
+// Função para salvar dados no JSONBin
+async function saveDataToJSONBin(data) {
+    try {
+        const response = await fetch(API_URL, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Master-Key": API_KEY,
+            },
+            body: JSON.stringify(data),
+        });
+        if (response.ok) {
+            console.log("Dados salvos com sucesso!");
+        } else {
+            console.error("Erro ao salvar os dados:", response.statusText);
+        }
+    } catch (error) {
+        console.error("Erro ao salvar os dados:", error);
+    }
+}
+
+// Adiciona eventos ao carregar a página
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadParticipants();
+
+    const nextButton = document.getElementById('next-button');
+    if (nextButton) {
+        nextButton.addEventListener('click', finalizeStep2);
+    }
+});

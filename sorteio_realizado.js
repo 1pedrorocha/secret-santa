@@ -1,48 +1,65 @@
-// Função para carregar os blocos salvos no Local Storage, randomizar e desfazer os blocos
-function performDraw() {
-    const blocks = JSON.parse(localStorage.getItem('Blocks')) || [];
+// Configurações da API do JSONBin
+const API_URL = "https://api.jsonbin.io/v3/b/6765548bad19ca34f8de4586";
+const API_KEY = "$2a$10$oCxIAsUt8iE0U3g08fKK9OYyAqJ09/mkZRrUNIVdny/uyRP90wAjG";
 
-    console.log("Blocos recebidos:", blocks);
-
-    // Randomizar a ordem dos blocos
-    const shuffledBlocks = shuffleArray(blocks);
-    console.log("Blocos randomizados:", shuffledBlocks);
-
-    // Desfazer os blocos, mantendo a ordem interna
-    const finalSequence = [];
-    shuffledBlocks.forEach(block => {
-        const items = block.split('/'); // Divide o bloco em seus elementos
-        finalSequence.push(...items);
-    });
-
-    console.log("Sequência final após desfazer os blocos:", finalSequence);
-
-    // Criar pares do sorteio
-    const pairs = new Map();
-    for (let i = 0; i < finalSequence.length; i++) {
-        const current = finalSequence[i];
-        const next = finalSequence[(i + 1) % finalSequence.length]; // Conecta o último ao primeiro
-        pairs.set(current, next);
+// Função para carregar os blocos do JSONBin
+async function loadBlocks() {
+    try {
+        const response = await fetch(API_URL, {
+            method: "GET",
+            headers: {
+                "X-Master-Key": API_KEY,
+            },
+        });
+        if (response.ok) {
+            const result = await response.json();
+            return result.record.blocks || [];
+        } else {
+            console.error("Erro ao carregar os blocos:", response.statusText);
+            return [];
+        }
+    } catch (error) {
+        console.error("Erro ao carregar os blocos:", error);
+        return [];
     }
+}
 
-    console.log("Pares finais do sorteio:", Array.from(pairs));
+// Função para embaralhar um array
+function shuffleArray(array) {
+    const shuffled = array.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
 
-    // Salvar no Local Storage para uso posterior
-    localStorage.setItem('FinalArray', JSON.stringify(Array.from(pairs)));
+// Função para expandir blocos em uma sequência
+function expandBlocks(blocks) {
+    const expanded = [];
+    blocks.forEach(block => {
+        expanded.push(...block.split("/"));
+    });
+    return expanded;
+}
 
+// Função para criar pares do sorteio
+function createPairs(sequence) {
+    const pairs = new Map();
+    for (let i = 0; i < sequence.length; i++) {
+        const giver = sequence[i];
+        const receiver = sequence[(i + 1) % sequence.length];
+        pairs.set(giver, receiver);
+    }
     return pairs;
 }
 
 // Função para carregar os botões dos participantes
-function loadParticipantButtons() {
-    const participants = JSON.parse(localStorage.getItem('Participants')) || [];
-    const pairs = new Map(JSON.parse(localStorage.getItem('FinalArray')) || []);
+function loadParticipantButtons(pairs) {
     const container = document.getElementById('participantButtons');
+    container.innerHTML = ''; // Limpa o container
 
-    // Ordenar os nomes dos participantes em ordem alfabética
-    const sortedParticipants = participants.sort();
-
-    sortedParticipants.forEach((participant) => {
+    Array.from(pairs.keys()).sort().forEach(participant => {
         const button = document.createElement('button');
         button.className = 'participant-button';
         button.innerText = participant;
@@ -61,8 +78,6 @@ function revealSelection(participant, pairs) {
     document.getElementById('revealSubtitle').innerText = "Seu amigo secreto é...";
     document.getElementById('revealFriend').innerText = selected || "Nenhum amigo selecionado";
     document.getElementById('revealDate').innerText = "25/12/2024";
-
-    console.log("Revelando seleção:", participant, "->", selected);
 
     // Troca visibilidade
     mainContent.classList.add('hidden');
@@ -88,9 +103,7 @@ function showConfirmationModal(participant, pairs) {
 
     // Define o título e a mensagem do modal
     modalTitle.innerText = `Você é ${participant}?`;
-    modalMessage.innerHTML = `
-        Se você revelar o nome de outro participante, estragará o sorteio e terá que ser repetido.
-    `;
+    modalMessage.innerHTML = `Se você revelar o nome de outro participante, estragará o sorteio e terá que ser repetido.`;
     confirmButton.innerText = `Sim, eu sou ${participant}`;
     confirmButton.onclick = () => {
         revealSelection(participant, pairs);
@@ -106,23 +119,25 @@ function closeModal() {
     modal.style.display = 'none';
 }
 
-// Função para embaralhar um array
-function shuffleArray(array) {
-    const shuffled = array.slice();
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+// Carregar e processar os blocos ao carregar a página
+document.addEventListener('DOMContentLoaded', async () => {
+    const blocks = await loadBlocks();
+    if (blocks.length === 0) {
+        console.error("Nenhum bloco encontrado.");
+        return;
     }
-    return shuffled;
-}
 
-// Carregar os botões e realizar o sorteio ao carregar a página
-document.addEventListener('DOMContentLoaded', () => {
-    const pairs = performDraw(); // Realiza o sorteio
-    if (pairs) {
-        loadParticipantButtons(); // Gera os botões
-        console.log("Sorteio realizado com sucesso. Resultado:", Array.from(pairs));
-    } else {
-        console.error("Erro crítico ao realizar o sorteio. Verifique os blocos.");
-    }
+    console.log("Blocos carregados:", blocks);
+
+    // Randomiza a ordem dos blocos e expande a sequência
+    const shuffledBlocks = shuffleArray(blocks);
+    const sequence = expandBlocks(shuffledBlocks);
+    console.log("Sequência final:", sequence);
+
+    // Cria os pares do sorteio
+    const pairs = createPairs(sequence);
+    console.log("Pares criados:", Array.from(pairs));
+
+    // Exibe os botões dos participantes
+    loadParticipantButtons(pairs);
 });
